@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc 
+         http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+         http://www.springframework.org/schema/beans 
+         http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context 
+         http://www.springframework.org/schema/context/spring-context-4.0.xsd
+         http://www.springframework.org/schema/tx 
+         http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+         http://www.springframework.org/schema/security 
+         http://www.springframework.org/schema/security/spring-security-4.0.xsd">
+
+
+	<!-- hibernate db context -->
+	<beans:bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<beans:property name="driverClassName" value="org.h2.Driver" />
+		<!-- <beans:property name="url" value="jdbc:h2:tcp://localhost/~/test" 
+			/> -->
+		<beans:property name="url" value="jdbc:h2:tcp://localhost/~/test" />
+		<beans:property name="username" value="sa" />
+		<beans:property name="password" value="" />
+	</beans:bean>
+	<context:component-scan base-package="com.colloboration" />
+	<beans:bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+
+		<beans:property name="dataSource" ref="dataSource" />
+		<beans:property name="hibernateProperties">
+			<beans:props>
+				<beans:prop key="hibernate.dialect">org.hibernate.dialect.H2Dialect
+				</beans:prop>
+				<beans:prop key="hibernate.show_sql">true</beans:prop>
+				<beans:prop key="hibernate.format_sql">true</beans:prop>
+				<beans:prop key="hibernate.hbm2ddl.auto">update</beans:prop>
+			</beans:props>
+		</beans:property>
+		<beans:property name="packagesToScan">
+			<beans:list>
+				<beans:value>com.colloboration.chatapp.model</beans:value>
+			</beans:list>
+		</beans:property>
+	</beans:bean>
+
+	<!-- <tx:annotation-driven transaction-manager="transactionManager"/> -->
+
+
+	<beans:bean id="transactionManager"
+		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+		<beans:property name="sessionFactory" ref="sessionFactory" />
+	</beans:bean>
+	<beans:bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<beans:property name="maxUploadSize" value="1024000" />
+	</beans:bean>
+	<!-- spring security code -->
+	<security:http auto-config="true" use-expressions="true">
+		<security:intercept-url pattern="/login"
+			access="permitAll" />
+		
+		<security:form-login login-page="/userLogin"
+		login-processing-url="/j_spring_security_check"
+			username-parameter="username" password-parameter="password"
+			authentication-failure-url="/userLogin?error=login failed"
+			default-target-url="/index" />
+
+		<security:logout logout-success-url="/index"
+			invalidate-session="true" delete-cookies="JSESSIONID" />
+		<security:csrf disabled="true"/>
+</security:http>
+
+	<security:authentication-manager>
+		<security:authentication-provider>
+			<security:jdbc-user-service
+				data-source-ref="dataSource"
+				users-by-username-query="select username,pass,enabled from chatuser where username=?"
+				authorities-by-username-query="select u1.username, u2.rolename from chatuser u1, user_authorize u2 where u1.userid = u2.userid and u1.username =?" />
+		</security:authentication-provider>
+	</security:authentication-manager>
+	
+	<!-- email sending to registered users -->
+	<beans:bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+		<beans:property name="host" value="smtp.gmail.com" />
+		<beans:property name="port" value="587" />
+		<beans:property name="username" value="test28780@gmail.com" />
+		<beans:property name="password" value="********" />
+ 
+		<!-- The name of the property, following JavaBean naming conventions -->
+		<beans:property name="javaMailProperties">
+			<beans:props>
+				<beans:prop key="mail.transport.protocol">smtp</beans:prop>
+				<beans:prop key="mail.smtp.auth">true</beans:prop>
+				<beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
+				<beans:prop key="mail.debug">true</beans:prop>
+			</beans:props>
+		</beans:property>
+	</beans:bean>
+</beans:beans>
